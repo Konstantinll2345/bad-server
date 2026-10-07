@@ -1,7 +1,6 @@
 import InputMask from '@mona-health/react-input-mask'
 import { SyntheticEvent, useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { AppRoute } from '../../utils/constants'
 import Button from '../button/button'
 import { Input } from '../form'
 import Form from '../form/form'
@@ -33,7 +32,6 @@ export function OrderContacts() {
         )
 
     useEffect(() => {
-        // восстанавливаем значение формы из стора
         setValuesForm({
             email: orderPersistData.email,
             phone: orderPersistData.phone,
@@ -47,25 +45,21 @@ export function OrderContacts() {
     const handleFormSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault()
         setInfo(values)
-        // т.к. на момент отправки запроса данные введенные в поля еще не записаны в store, добавляем в запрос их вручную
         createOrder({ ...orderPersistData, ...values })
             .unwrap()
             .then((dataResponse) => {
                 resetBasket()
-                navigate(
-                    { pathname: AppRoute.OrderSuccess },
-                    {
-                        state: {
-                            orderResponse: dataResponse,
-                            background: {
-                                ...location,
-                                pathname: '/',
-                                state: null,
-                            },
+                navigate('/order/success', {
+                    state: {
+                        orderResponse: dataResponse,
+                        background: {
+                            ...location,
+                            pathname: '/',
+                            state: null,
                         },
-                        replace: true,
-                    }
-                )
+                    },
+                    replace: true,
+                })
             })
     }
 
@@ -104,7 +98,7 @@ export function OrderContacts() {
                     type='button'
                     extraClass={styles.order__button_secondary}
                     component={Link}
-                    to={{ pathname: AppRoute.OrderAddress }}
+                    to='/order/address'
                     state={{
                         background: { ...location, pathname: '/', state: null },
                     }}
