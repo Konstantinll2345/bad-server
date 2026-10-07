@@ -1,13 +1,16 @@
 import { NextFunction, Request, Response } from 'express'
-import { FilterQuery, Error as MongooseError, Types } from 'mongoose'
+import {
+    FilterQuery,
+    Error as MongooseError,
+    PipelineStage,
+    Types,
+} from 'mongoose'
 import BadRequestError from '../errors/bad-request-error'
 import NotFoundError from '../errors/not-found-error'
 import Order, { IOrder } from '../models/order'
 import Product, { IProduct } from '../models/product'
 import User from '../models/user'
-
-// eslint-disable-next-line max-len
-// GET /orders?page=2&limit=5&sort=totalAmount&order=desc&orderDateFrom=2024-07-01&orderDateTo=2024-08-01&status=delivering&totalAmountFrom=100&totalAmountTo=1000&search=%2B1
+import escapeRegExp from '../utils/escapeRegExp'
 
 export const getOrders = async (
     req: Request,
@@ -67,7 +70,7 @@ export const getOrders = async (
             }
         }
 
-        const aggregatePipeline: any[] = [
+        const aggregatePipeline: PipelineStage[] = [
             { $match: filters },
             {
                 $lookup: {
@@ -90,10 +93,15 @@ export const getOrders = async (
         ]
 
         if (search) {
-            const searchRegex = new RegExp(search as string, 'i')
+            const searchRegex = new RegExp(
+                escapeRegExp(search as string),
+                'i'
+            )
             const searchNumber = Number(search)
 
-            const searchConditions: any[] = [{ 'products.title': searchRegex }]
+            const searchConditions: Record<string, unknown>[] = [
+                { 'products.title': searchRegex },
+            ]
 
             if (!Number.isNaN(searchNumber)) {
                 searchConditions.push({ orderNumber: searchNumber })
@@ -103,12 +111,12 @@ export const getOrders = async (
                 $match: {
                     $or: searchConditions,
                 },
-            })
+            } as PipelineStage)
 
-            filters.$or = searchConditions
+            filters.$or = searchConditions as FilterQuery<IOrder>['$or']
         }
 
-        const sort: { [key: string]: any } = {}
+        const sort: { [key: string]: 1 | -1 } = {}
 
         if (sortField && sortOrder) {
             sort[sortField as string] = sortOrder === 'desc' ? -1 : 1
@@ -184,18 +192,18 @@ export const getOrdersCurrentUser = async (
         let orders = user.orders as unknown as IOrder[]
 
         if (search) {
-            // если не экранировать то получаем Invalid regular expression: /+1/i: Nothing to repeat
-            const searchRegex = new RegExp(search as string, 'i')
+            const searchRegex = new RegExp(
+                escapeRegExp(search as string),
+                'i'
+            )
             const searchNumber = Number(search)
             const products = await Product.find({ title: searchRegex })
             const productIds = products.map((product) => product._id)
 
             orders = orders.filter((order) => {
-                // eslint-disable-next-line max-len
                 const matchesProductTitle = order.products.some((product) =>
                     productIds.some((id) => id.equals(product._id))
                 )
-                // eslint-disable-next-line max-len
                 const matchesOrderNumber =
                     !Number.isNaN(searchNumber) &&
                     order.orderNumber === searchNumber
@@ -223,7 +231,6 @@ export const getOrdersCurrentUser = async (
     }
 }
 
-// Get order by ID
 export const getOrderByNumber = async (
     req: Request,
     res: Response,
@@ -267,7 +274,6 @@ export const getOrderCurrentUserByNumber = async (
                     )
             )
         if (!order.customer._id.equals(userId)) {
-            // Если нет доступа не возвращаем 403, а отдаем 404
             return next(
                 new NotFoundError('Заказ по заданному id отсутствует в базе')
             )
@@ -281,7 +287,6 @@ export const getOrderCurrentUserByNumber = async (
     }
 }
 
-// POST /product
 export const createOrder = async (
     req: Request,
     res: Response,
@@ -331,7 +336,6 @@ export const createOrder = async (
     }
 }
 
-// Update an order
 export const updateOrder = async (
     req: Request,
     res: Response,
@@ -363,7 +367,6 @@ export const updateOrder = async (
     }
 }
 
-// Delete an order
 export const deleteOrder = async (
     req: Request,
     res: Response,

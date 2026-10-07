@@ -1,6 +1,6 @@
-import { Request, Express } from 'express'
-import multer, { FileFilterCallback } from 'multer'
+import { Request } from 'express'
 import { mkdirSync } from 'fs'
+import multer, { FileFilterCallback } from 'multer'
 import { join } from 'path'
 
 type DestinationCallback = (error: Error | null, destination: string) => void
@@ -53,4 +53,13 @@ const fileFilter = (
     return cb(null, true)
 }
 
-export default multer({ storage, fileFilter })
+export default multer({
+    storage,
+    fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024,
+        files: 1,
+        fields: 10,
+        parts: 20,
+    },
+})

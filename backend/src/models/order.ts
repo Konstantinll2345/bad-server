@@ -1,5 +1,6 @@
 /* eslint-disable prefer-arrow-callback */
 import mongoose, { Document, Schema, Types } from 'mongoose'
+import sanitizeHtml from 'sanitize-html'
 import validator from 'validator'
 import { PaymentType, phoneRegExp } from '../middlewares/validations'
 import Counter from './counter'
@@ -34,7 +35,12 @@ const orderSchema: Schema = new Schema(
             enum: Object.values(StatusType),
             default: StatusType.New,
         },
-        totalAmount: { type: Number, required: true },
+        totalAmount: {
+            type: Number,
+            required: true,
+            min: 0,
+            max: 1000000,
+        },
         products: [
             {
                 type: Types.ObjectId,
@@ -47,10 +53,14 @@ const orderSchema: Schema = new Schema(
             required: true,
         },
         customer: { type: Types.ObjectId, ref: 'user' },
-        deliveryAddress: { type: String },
+        deliveryAddress: {
+            type: String,
+            maxlength: [500, 'Максимальная длина адреса — 500 символов'],
+        },
         email: {
             type: String,
             required: [true, 'Поле "email" должно быть заполнено'],
+            maxlength: [100, 'Максимальная длина email — 100 символов'],
             validate: {
                 validator: (v: string) => validator.isEmail(v),
                 message: 'Поле "email" должно быть валидным email-адресом',
@@ -59,6 +69,7 @@ const orderSchema: Schema = new Schema(
         phone: {
             type: String,
             required: [true, 'Поле "phone" должно быть заполнено'],
+            maxlength: [20, 'Максимальная длина телефона — 20 символов'],
             validate: {
                 validator: (v: string) => phoneRegExp.test(v),
                 message: 'Поле "phone" должно быть валидным телефоном.',
@@ -67,6 +78,12 @@ const orderSchema: Schema = new Schema(
         comment: {
             type: String,
             default: '',
+            maxlength: [1000, 'Максимальная длина комментария — 1000 символов'],
+            set: (v: string) =>
+                sanitizeHtml(v, {
+                    allowedTags: [],
+                    allowedAttributes: {},
+                }),
         },
     },
     { versionKey: false, timestamps: true }

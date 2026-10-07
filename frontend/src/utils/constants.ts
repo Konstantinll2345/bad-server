@@ -79,8 +79,8 @@ export enum AppRoute {
     AdminOrders = '/admin/orders',
     AdminOrder = '/admin/order/:number',
     AdminOrdersFilter = '/admin/orders/filter',
-    AddProduct = 'add',
-    EditProduct = 'edit/:editId',
+    AddProduct = '/admin/add',
+    EditProduct = '/admin/edit/:editId',
 }
 
 export enum FilterType {

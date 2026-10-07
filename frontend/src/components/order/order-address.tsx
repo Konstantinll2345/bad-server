@@ -7,7 +7,6 @@ import {
     orderFormActions,
     orderFormSelector,
 } from '../../services/slice/orderForm'
-import { AppRoute } from '../../utils/constants'
 import Form, { Input } from '../form'
 import useFormWithValidation from '../form/hooks/useFormWithValidation'
 import { Radio } from '../form/radio'
@@ -39,14 +38,11 @@ export function OrderAddress() {
 
     const nextStep = () => {
         setInfo(values)
-        navigate(
-            { pathname: AppRoute.OrderContacts },
-            {
-                state: {
-                    background: { ...location, pathname: '/', state: null },
-                },
-            }
-        )
+        navigate('/order/contacts', {
+            state: {
+                background: { ...location, pathname: '/', state: null },
+            },
+        })
     }
 
     return (

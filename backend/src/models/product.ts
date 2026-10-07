@@ -28,19 +28,30 @@ const cardsSchema = new mongoose.Schema<IProduct>(
             fileName: {
                 type: String,
                 required: [true, 'Поле "image.fileName" должно быть заполнено'],
+                maxlength: [255, 'Максимальная длина fileName — 255 символов'],
             },
-            originalName: String,
+            originalName: {
+                type: String,
+                maxlength: [
+                    255,
+                    'Максимальная длина originalName — 255 символов',
+                ],
+            },
         },
         category: {
             type: String,
             required: [true, 'Поле "category" должно быть заполнено'],
+            maxlength: [50, 'Максимальная длина категории — 50 символов'],
         },
         description: {
             type: String,
+            maxlength: [5000, 'Максимальная длина описания — 5000 символов'],
         },
         price: {
             type: Number,
             default: null,
+            min: 0,
+            max: 1000000,
         },
     },
     { versionKey: false }
@@ -48,7 +59,6 @@ const cardsSchema = new mongoose.Schema<IProduct>(
 
 cardsSchema.index({ title: 'text' })
 
-// Можно лучше: удалять старое изображением перед обновлением сущности
 cardsSchema.pre('findOneAndUpdate', async function deleteOldImage() {
     // @ts-ignore
     const updateImage = this.getUpdate().$set?.image
@@ -61,7 +71,6 @@ cardsSchema.pre('findOneAndUpdate', async function deleteOldImage() {
     }
 })
 
-// Можно лучше: удалять файл с изображением после удаление сущности
 cardsSchema.post('findOneAndDelete', async (doc: IProduct) => {
     unlink(join(__dirname, `../public/${doc.image.fileName}`), (err) =>
         console.log(err)

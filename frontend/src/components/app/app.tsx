@@ -110,23 +110,14 @@ const RouteComponent = () => {
                         </ProtectedRoute>
                     }
                 >
-                    <Route path={AppRoute.Admin} element={<AdminProducts />} />
+                    <Route index element={<AdminProducts />} />
+                    <Route path='add' element={<AdminNewProduct />} />
                     <Route
-                        path={AppRoute.AddProduct}
-                        element={<AdminNewProduct />}
-                    />
-                    <Route
-                        path={AppRoute.EditProduct}
+                        path='edit/:editId'
                         element={<AdminEditProduct />}
                     />
-                    <Route
-                        path={AppRoute.AdminOrders}
-                        element={<AdminOrders />}
-                    />
-                    <Route
-                        path={AppRoute.AdminCustomers}
-                        element={<AdminCustomers />}
-                    />
+                    <Route path='orders' element={<AdminOrders />} />
+                    <Route path='customers' element={<AdminCustomers />} />
                 </Route>
                 <Route
                     path={AppRoute.Profile}
@@ -136,10 +127,7 @@ const RouteComponent = () => {
                         </ProtectedRoute>
                     }
                 >
-                    <Route
-                        path={AppRoute.ProfileOrders}
-                        element={<ProfileOrders />}
-                    />
+                    <Route path='orders' element={<ProfileOrders />} />
                 </Route>
                 <Route path={AppRoute.Basket} element={<Basket />} />
                 <Route
@@ -150,18 +138,9 @@ const RouteComponent = () => {
                         </ProtectedRoute>
                     }
                 >
-                    <Route
-                        path={AppRoute.OrderAddress}
-                        element={<OrderAddress />}
-                    />
-                    <Route
-                        path={AppRoute.OrderAddress}
-                        element={<OrderContacts />}
-                    />
-                    <Route
-                        path={AppRoute.OrderAddress}
-                        element={<OrderSuccess />}
-                    />
+                    <Route path='address' element={<OrderAddress />} />
+                    <Route path='contacts' element={<OrderContacts />} />
+                    <Route path='success' element={<OrderSuccess />} />
                 </Route>
                 <Route path={AppRoute.Product} element={<CardDetails />} />
             </Routes>
@@ -222,7 +201,7 @@ const RouteComponent = () => {
                         }
                     >
                         <Route
-                            path={AppRoute.OrderAddress}
+                            path='address'
                             element={
                                 <Modal
                                     title='Способ оплаты'
@@ -235,7 +214,7 @@ const RouteComponent = () => {
                             }
                         />
                         <Route
-                            path={AppRoute.OrderContacts}
+                            path='contacts'
                             element={
                                 <Modal
                                     onClose={handleModalClose({
@@ -247,7 +226,7 @@ const RouteComponent = () => {
                             }
                         />
                         <Route
-                            path={AppRoute.OrderSuccess}
+                            path='success'
                             element={
                                 <Modal
                                     onClose={handleModalClose({
@@ -261,7 +240,7 @@ const RouteComponent = () => {
                     </Route>
                     <Route path={AppRoute.Admin} element={<AdminPage />}>
                         <Route
-                            path={AppRoute.AddProduct}
+                            path='add'
                             element={
                                 <Modal
                                     onClose={handleModalClose({
@@ -273,7 +252,7 @@ const RouteComponent = () => {
                             }
                         />
                         <Route
-                            path={AppRoute.AdminOrdersFilter}
+                            path='orders/filter'
                             element={
                                 <Modal onClose={handleModalClose(-1)}>
                                     <AdminFilterOrders />
@@ -281,7 +260,7 @@ const RouteComponent = () => {
                             }
                         />
                         <Route
-                            path={AppRoute.AdminCustomersFilter}
+                            path='customers/filter'
                             element={
                                 <Modal onClose={handleModalClose(-1)}>
                                     <AdminFilterCustomers />
@@ -289,25 +268,23 @@ const RouteComponent = () => {
                             }
                         />
                         <Route
-                            path={AppRoute.AdminOrder}
+                            path='order/:number'
                             element={
                                 <Modal onClose={handleModalClose(-1)}>
                                     <AdminOrderDetail />
                                 </Modal>
                             }
                         />
-
                         <Route
-                            path={AppRoute.AdminCustomer}
+                            path='customer/:customerId'
                             element={
                                 <Modal onClose={handleModalClose(-1)}>
                                     <AdminCustomerDetail />
                                 </Modal>
                             }
                         />
-
                         <Route
-                            path={AppRoute.EditProduct}
+                            path='edit/:editId'
                             element={
                                 <Modal
                                     onClose={handleModalClose({
@@ -319,10 +296,9 @@ const RouteComponent = () => {
                             }
                         />
                     </Route>
-
                     <Route path={AppRoute.Profile} element={<ProfilePage />}>
                         <Route
-                            path={AppRoute.ProfileOrder}
+                            path='order/:number'
                             element={
                                 <Modal onClose={handleModalClose(-1)}>
                                     <ProfileOrderDetail />
