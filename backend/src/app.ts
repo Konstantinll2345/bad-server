@@ -8,6 +8,7 @@ import helmet from 'helmet'
 import mongoose from 'mongoose'
 import path from 'path'
 import { DB_ADDRESS, ORIGIN_ALLOW } from './config'
+import { doubleCsrfProtection } from './middlewares/csrf'
 import errorHandler from './middlewares/error-handler'
 import serveStatic from './middlewares/serverStatic'
 import routes from './routes'
@@ -31,26 +32,12 @@ app.use(
     })
 )
 
-app.use((req, res, next) => {
-    const unsafeMethods = ['POST', 'PUT', 'PATCH', 'DELETE']
-    if (unsafeMethods.includes(req.method)) {
-        const origin = req.get('Origin')
-        const referer = req.get('Referer')
-        const originOk = origin === ORIGIN_ALLOW
-        const refererOk = Boolean(referer && referer.startsWith(ORIGIN_ALLOW))
-        if (!originOk && !refererOk) {
-            return res
-                .status(403)
-                .json({ message: 'CSRF: недопустимый источник запроса' })
-        }
-    }
-    return next()
-})
-
 app.use(serveStatic(path.join(__dirname, 'public')))
 
 app.use(urlencoded({ extended: true, limit: '1mb' }))
 app.use(json({ limit: '1mb' }))
+
+app.use(doubleCsrfProtection)
 
 app.use(routes)
 app.use(errors())
