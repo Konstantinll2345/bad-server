@@ -15,11 +15,37 @@ import routes from './routes'
 const { PORT = 3000 } = process.env
 const app = express()
 
+app.use(helmet())
 app.use(cookieParser())
 
 const corsOptions = { origin: ORIGIN_ALLOW, credentials: true }
 app.use(cors(corsOptions))
 app.options('*', cors(corsOptions))
+
+app.use(
+    rateLimit({
+        windowMs: 60 * 1000,
+        max: 100,
+        standardHeaders: true,
+        legacyHeaders: false,
+    })
+)
+
+app.use((req, res, next) => {
+    const unsafeMethods = ['POST', 'PUT', 'PATCH', 'DELETE']
+    if (unsafeMethods.includes(req.method)) {
+        const origin = req.get('Origin')
+        const referer = req.get('Referer')
+        const originOk = origin === ORIGIN_ALLOW
+        const refererOk = Boolean(referer && referer.startsWith(ORIGIN_ALLOW))
+        if (!originOk && !refererOk) {
+            return res
+                .status(403)
+                .json({ message: 'CSRF: недопустимый источник запроса' })
+        }
+    }
+    return next()
+})
 
 app.use(serveStatic(path.join(__dirname, 'public')))
 
@@ -29,9 +55,6 @@ app.use(json({ limit: '1mb' }))
 app.use(routes)
 app.use(errors())
 app.use(errorHandler)
-
-app.use(helmet())
-app.use(rateLimit({ windowMs: 60 * 1000, max: 100 }))
 
 const bootstrap = async () => {
     try {
