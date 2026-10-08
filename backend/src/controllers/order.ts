@@ -125,21 +125,84 @@ export const getOrders = async (
             }
         }
 
-        const aggregatePipeline: PipelineStage[] = [
-            { $match: filters },
-            // ...
-        ]
-
         if (search) {
             if (typeof search !== 'string') {
                 return next(new BadRequestError('Неверный параметр search'))
             }
             const searchRegex = new RegExp(escapeRegExp(search), 'i')
+            const searchNumber = Number(search)
+
+            const searchConditions: Record<string, unknown>[] = [
+                { 'products.title': searchRegex },
+            ]
+
+            if (!Number.isNaN(searchNumber)) {
+                searchConditions.push({ orderNumber: searchNumber })
+            }
+
+            filters.$or = searchConditions as FilterQuery<IOrder>['$or']
         }
 
         const sort: { [key: string]: 1 | -1 } = {}
         sort[safeSortField] = safeSortOrder === 'desc' ? -1 : 1
 
+        const aggregatePipeline: PipelineStage[] = [
+            { $match: filters },
+            { $sort: sort },
+            { $skip: (safePage - 1) * safeLimit },
+            { $limit: safeLimit },
+            {
+                $lookup: {
+                    from: 'products',
+                    localField: 'products',
+                    foreignField: '_id',
+                    as: 'products',
+                },
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'customer',
+                    foreignField: '_id',
+                    as: 'customer',
+                    pipeline: [
+                        {
+                            $project: {
+                                password: 0,
+                                tokens: 0,
+                            },
+                        },
+                    ],
+                },
+            },
+            { $unwind: '$customer' },
+            { $unwind: '$products' },
+            {
+                $group: {
+                    _id: '$_id',
+                    orderNumber: { $first: '$orderNumber' },
+                    status: { $first: '$status' },
+                    totalAmount: { $first: '$totalAmount' },
+                    products: { $push: '$products' },
+                    customer: { $first: '$customer' },
+                    createdAt: { $first: '$createdAt' },
+                },
+            },
+        ]
+
+        const orders = await Order.aggregate(aggregatePipeline)
+        const totalOrders = await Order.countDocuments(filters)
+        const totalPages = Math.ceil(totalOrders / safeLimit)
+
+        res.status(200).json({
+            orders,
+            pagination: {
+                totalOrders,
+                totalPages,
+                currentPage: safePage,
+                pageSize: safeLimit,
+            },
+        })
     } catch (error) {
         next(error)
     }
@@ -153,9 +216,12 @@ export const getOrdersCurrentUser = async (
     try {
         const userId = res.locals.user._id
         const { search, page = 1, limit = 5 } = req.query
+
+        const safeLimit = Math.min(Math.max(Number(limit) || 5, 1), 10)
+        const safePage = Math.max(Number(page) || 1, 1)
         const options = {
-            skip: (Number(page) - 1) * Number(limit),
-            limit: Number(limit),
+            skip: (safePage - 1) * safeLimit,
+            limit: safeLimit,
         }
 
         const user = await User.findById(userId)
@@ -167,6 +233,7 @@ export const getOrdersCurrentUser = async (
                     },
                     {
                         path: 'customer',
+                        select: '-password -tokens',
                     },
                 ],
             })
@@ -201,7 +268,7 @@ export const getOrdersCurrentUser = async (
         }
 
         const totalOrders = orders.length
-        const totalPages = Math.ceil(totalOrders / Number(limit))
+        const totalPages = Math.ceil(totalOrders / safeLimit)
 
         orders = orders.slice(options.skip, options.skip + options.limit)
 
@@ -210,8 +277,8 @@ export const getOrdersCurrentUser = async (
             pagination: {
                 totalOrders,
                 totalPages,
-                currentPage: Number(page),
-                pageSize: Number(limit),
+                currentPage: safePage,
+                pageSize: safeLimit,
             },
         })
     } catch (error) {
@@ -228,7 +295,10 @@ export const getOrderByNumber = async (
         const order = await Order.findOne({
             orderNumber: req.params.orderNumber,
         })
-            .populate(['customer', 'products'])
+            .populate([
+                { path: 'customer', select: '-password -tokens' },
+                { path: 'products' },
+            ])
             .orFail(
                 () =>
                     new NotFoundError(
@@ -254,7 +324,10 @@ export const getOrderCurrentUserByNumber = async (
         const order = await Order.findOne({
             orderNumber: req.params.orderNumber,
         })
-            .populate(['customer', 'products'])
+            .populate([
+                { path: 'customer', select: '-password -tokens' },
+                { path: 'products' },
+            ])
             .orFail(
                 () =>
                     new NotFoundError(
@@ -312,7 +385,10 @@ export const createOrder = async (
             customer: userId,
             deliveryAddress: address,
         })
-        const populateOrder = await newOrder.populate(['customer', 'products'])
+        const populateOrder = await newOrder.populate([
+            { path: 'customer', select: '-password -tokens' },
+            { path: 'products' },
+        ])
         await populateOrder.save()
 
         return res.status(200).json(populateOrder)
@@ -342,7 +418,10 @@ export const updateOrder = async (
                         'Заказ по заданному id отсутствует в базе'
                     )
             )
-            .populate(['customer', 'products'])
+            .populate([
+                { path: 'customer', select: '-password -tokens' },
+                { path: 'products' },
+            ])
         return res.status(200).json(updatedOrder)
     } catch (error) {
         if (error instanceof MongooseError.ValidationError) {
@@ -368,7 +447,10 @@ export const deleteOrder = async (
                         'Заказ по заданному id отсутствует в базе'
                     )
             )
-            .populate(['customer', 'products'])
+            .populate([
+                { path: 'customer', select: '-password -tokens' },
+                { path: 'products' },
+            ])
         return res.status(200).json(deletedOrder)
     } catch (error) {
         if (error instanceof MongooseError.CastError) {
