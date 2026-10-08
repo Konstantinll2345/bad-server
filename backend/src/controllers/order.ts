@@ -31,125 +31,115 @@ export const getOrders = async (
             search,
         } = req.query
 
-        const safeLimit = Math.min(Number(limit) || 10, 10)
+        const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 10)
         const safePage = Math.max(Number(page) || 1, 1)
+
+        const ALLOWED_SORT_FIELDS = [
+            'createdAt',
+            'totalAmount',
+            'orderNumber',
+            'status',
+        ] as const
+        const ALLOWED_SORT_ORDERS = ['asc', 'desc'] as const
+
+        const safeSortField =
+            typeof sortField === 'string' &&
+                (ALLOWED_SORT_FIELDS as readonly string[]).includes(sortField)
+                ? sortField
+                : 'createdAt'
+
+        const safeSortOrder =
+            typeof sortOrder === 'string' &&
+                (ALLOWED_SORT_ORDERS as readonly string[]).includes(sortOrder)
+                ? sortOrder
+                : 'desc'
 
         const filters: FilterQuery<Partial<IOrder>> = {}
 
         if (status) {
-            filters.status = String(status)
+            if (typeof status !== 'string') {
+                return next(new BadRequestError('Неверный параметр status'))
+            }
+            filters.status = status
         }
 
         if (totalAmountFrom) {
+            const from = Number(totalAmountFrom)
+            if (Number.isNaN(from)) {
+                return next(
+                    new BadRequestError('Неверный параметр totalAmountFrom')
+                )
+            }
             filters.totalAmount = {
                 ...filters.totalAmount,
-                $gte: Number(totalAmountFrom),
+                $gte: from,
             }
         }
 
         if (totalAmountTo) {
+            const to = Number(totalAmountTo)
+            if (Number.isNaN(to)) {
+                return next(
+                    new BadRequestError('Неверный параметр totalAmountTo')
+                )
+            }
             filters.totalAmount = {
                 ...filters.totalAmount,
-                $lte: Number(totalAmountTo),
+                $lte: to,
             }
         }
 
         if (orderDateFrom) {
+            if (typeof orderDateFrom !== 'string') {
+                return next(
+                    new BadRequestError('Неверный параметр orderDateFrom')
+                )
+            }
+            const from = new Date(orderDateFrom)
+            if (Number.isNaN(from.getTime())) {
+                return next(
+                    new BadRequestError('Неверный параметр orderDateFrom')
+                )
+            }
             filters.createdAt = {
                 ...filters.createdAt,
-                $gte: new Date(orderDateFrom as string),
+                $gte: from,
             }
         }
 
         if (orderDateTo) {
+            if (typeof orderDateTo !== 'string') {
+                return next(
+                    new BadRequestError('Неверный параметр orderDateTo')
+                )
+            }
+            const to = new Date(orderDateTo)
+            if (Number.isNaN(to.getTime())) {
+                return next(
+                    new BadRequestError('Неверный параметр orderDateTo')
+                )
+            }
             filters.createdAt = {
                 ...filters.createdAt,
-                $lte: new Date(orderDateTo as string),
+                $lte: to,
             }
         }
 
         const aggregatePipeline: PipelineStage[] = [
             { $match: filters },
-            {
-                $lookup: {
-                    from: 'products',
-                    localField: 'products',
-                    foreignField: '_id',
-                    as: 'products',
-                },
-            },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'customer',
-                    foreignField: '_id',
-                    as: 'customer',
-                },
-            },
-            { $unwind: '$customer' },
-            { $unwind: '$products' },
+            // ...
         ]
 
         if (search) {
-            const searchRegex = new RegExp(
-                escapeRegExp(search as string),
-                'i'
-            )
-            const searchNumber = Number(search)
-
-            const searchConditions: Record<string, unknown>[] = [
-                { 'products.title': searchRegex },
-            ]
-
-            if (!Number.isNaN(searchNumber)) {
-                searchConditions.push({ orderNumber: searchNumber })
+            if (typeof search !== 'string') {
+                return next(new BadRequestError('Неверный параметр search'))
             }
-
-            aggregatePipeline.push({
-                $match: {
-                    $or: searchConditions,
-                },
-            } as PipelineStage)
-
-            filters.$or = searchConditions as FilterQuery<IOrder>['$or']
+            const searchRegex = new RegExp(escapeRegExp(search), 'i')
         }
 
         const sort: { [key: string]: 1 | -1 } = {}
+        sort[safeSortField] = safeSortOrder === 'desc' ? -1 : 1
 
-        if (sortField && sortOrder) {
-            sort[sortField as string] = sortOrder === 'desc' ? -1 : 1
-        }
-
-        aggregatePipeline.push(
-            { $sort: sort },
-            { $skip: (safePage - 1) * safeLimit },
-            { $limit: safeLimit },
-            {
-                $group: {
-                    _id: '$_id',
-                    orderNumber: { $first: '$orderNumber' },
-                    status: { $first: '$status' },
-                    totalAmount: { $first: '$totalAmount' },
-                    products: { $push: '$products' },
-                    customer: { $first: '$customer' },
-                    createdAt: { $first: '$createdAt' },
-                },
-            }
-        )
-
-        const orders = await Order.aggregate(aggregatePipeline)
-        const totalOrders = await Order.countDocuments(filters)
-        const totalPages = Math.ceil(totalOrders / Number(limit))
-
-        res.status(200).json({
-            orders,
-            pagination: {
-                totalOrders,
-                totalPages,
-                currentPage: safePage,
-                pageSize: safeLimit,
-            },
-        })
     } catch (error) {
         next(error)
     }
