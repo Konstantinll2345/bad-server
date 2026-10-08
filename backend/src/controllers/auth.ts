@@ -11,13 +11,11 @@ import UnauthorizedError from '../errors/unauthorized-error'
 import { generateToken } from '../middlewares/csrf'
 import User from '../models/user'
 
-
-export const getCsrfToken = (req: Request, res: Response) => {
+const getCsrfToken = (req: Request, res: Response) => {
     const csrfToken = generateToken(req, res)
     res.json({ csrfToken })
 }
 
-// POST /auth/login
 const login = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { email, password } = req.body
@@ -39,7 +37,6 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
     }
 }
 
-// POST /auth/register
 const register = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { email, password, name } = req.body
@@ -71,7 +68,6 @@ const register = async (req: Request, res: Response, next: NextFunction) => {
     }
 }
 
-// GET /auth/user
 const getCurrentUser = async (
     _req: Request,
     res: Response,
@@ -91,7 +87,6 @@ const getCurrentUser = async (
     }
 }
 
-// Можно лучше: вынести общую логику получения данных из refresh токена
 const deleteRefreshTokenInUser = async (
     req: Request,
     _res: Response,
@@ -124,8 +119,6 @@ const deleteRefreshTokenInUser = async (
     return user
 }
 
-// Реализация удаления токена из базы может отличаться
-// GET  /auth/logout
 const logout = async (req: Request, res: Response, next: NextFunction) => {
     try {
         await deleteRefreshTokenInUser(req, res, next)
@@ -142,7 +135,6 @@ const logout = async (req: Request, res: Response, next: NextFunction) => {
     }
 }
 
-// GET  /auth/token
 const refreshAccessToken = async (
     req: Request,
     res: Response,
@@ -214,12 +206,10 @@ const updateCurrentUser = async (
 }
 
 export {
-    getCurrentUser,
-    getCurrentUserRoles,
-    login,
+    getCsrfToken, getCurrentUser,
+    getCurrentUserRoles, login,
     logout,
     refreshAccessToken,
     register,
     updateCurrentUser
 }
-

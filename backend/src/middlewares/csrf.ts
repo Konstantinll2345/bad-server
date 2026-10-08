@@ -4,7 +4,7 @@ import { CSRF_SECRET } from '../config'
 
 const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
   getSecret: () => CSRF_SECRET,
-  cookieName: '__csrf',
+  cookieName: '_csrf',
   cookieOptions: {
     httpOnly: true,
     sameSite: 'strict',
@@ -21,3 +21,4 @@ const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
 })
 
 export { doubleCsrfProtection, generateCsrfToken as generateToken }
+
