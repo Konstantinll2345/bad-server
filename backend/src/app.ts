@@ -28,7 +28,7 @@ app.options('*', cors(corsOptions))
 app.use(
     rateLimit({
         windowMs: 60 * 1000,
-        max: 30,
+        max: 50,
         standardHeaders: true,
         legacyHeaders: false,
     })
