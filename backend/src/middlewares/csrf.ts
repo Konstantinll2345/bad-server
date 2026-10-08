@@ -12,9 +12,8 @@ const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
     path: '/',
   },
 
-  getSessionIdentifier: (req: Request) => {
-    return req.ip || 'anonymous'
-  },
+  getSessionIdentifier: (req: Request) => req.ip || 'anonymous',
+
   getCsrfTokenFromRequest: (req: Request) =>
     req.headers['x-csrf-token'] as string,
   ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
