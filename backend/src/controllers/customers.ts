@@ -27,6 +27,9 @@ export const getCustomers = async (
             search,
         } = req.query
 
+        const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 10)
+        const safePage = Math.max(Number(page) || 1, 1)
+
         const filters: FilterQuery<Partial<IUser>> = {}
 
         if (registrationDateFrom) {
@@ -115,9 +118,6 @@ export const getCustomers = async (
             sort[sortField as string] = sortOrder === 'desc' ? -1 : 1
         }
 
-        const safeLimit = Math.min(Number(limit) || 10, 10)
-        const safePage = Math.max(Number(page) || 1, 1)
-
         const options = {
             sort,
             skip: (safePage - 1) * safeLimit,
@@ -136,12 +136,13 @@ export const getCustomers = async (
                 path: 'lastOrder',
                 populate: {
                     path: 'customer',
+                    select: '-password -tokens',
                 },
             },
         ])
 
         const totalUsers = await User.countDocuments(filters)
-        const totalPages = Math.ceil(totalUsers / Number(limit))
+        const totalPages = Math.ceil(totalUsers / safeLimit)
 
         res.status(200).json({
             customers: users,
@@ -165,7 +166,10 @@ export const getCustomerById = async (
     try {
         const user = await User.findById(req.params.id).populate([
             'orders',
-            'lastOrder',
+            {
+                path: 'lastOrder',
+                select: '-password -tokens',
+            },
         ])
         res.status(200).json(user)
     } catch (error) {
@@ -192,7 +196,13 @@ export const updateCustomer = async (
                         'Пользователь по заданному id отсутствует в базе'
                     )
             )
-            .populate(['orders', 'lastOrder'])
+            .populate([
+                'orders',
+                {
+                    path: 'lastOrder',
+                    select: '-password -tokens',
+                },
+            ])
         res.status(200).json(updatedUser)
     } catch (error) {
         next(error)
